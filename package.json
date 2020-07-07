@@ -1,0 +1,23 @@
+{
+  "name": "tc74",
+  "version": "1.0.0",
+  "description": "temperature server",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://sebastianet:Sag.2014@github.com/sebastianet/tc74.git"
+  },
+  "author": "Sebastia",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sebastianet/tc74/issues"
+  },
+  "homepage": "https://github.com/sebastianet/tc74#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
