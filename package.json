@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://sebastianet:Sag.2014@github.com/sebastianet/tc74.git"
+    "url": "git+https://github.com/sebastianet/tc74.git"
   },
   "author": "Sebastia",
   "license": "ISC",
