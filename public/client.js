@@ -1,4 +1,4 @@
-
+ 
 // nova funcio yymmdd de Date() - at client
 Date.prototype.yyyymmdd = function () {                            
 	var yyyy = this.getFullYear().toString() ;                                    
@@ -39,8 +39,29 @@ function index_ready() {              // DOM ready for index.htm
 
 } ; // index_ready(), DOM ready for INDEX.HTM
 
+
+$( "#butoLlegir" ).click( function() {
+
+    console.log( '+++ (' + genTimeStamp() + ') +++ clicked GET TEMP' ) ;
+
+    $.getJSON( '/get_temp', function( mi_json ) {
+
+        console.log( '+++ (' + genTimeStamp() + ') +++ got JSON q {' + mi_json.status + '}.' ) ;
+
+        if ( mi_json.status == "OK" ) {
+            console.log( '+++ got {' + mi_json.temp + '}.' ) ;
+            var szTemp = genTimeStamp() + ' *** la temperatura a casa meva es ' + mi_json.temp + 'ºC ***' ;
+            $( "#id_temp" ).html( szTemp ) ;                                   // show error message at specific <div>
+        } else {
+            var szError = genTimeStamp() + 'Error RxJSON ' + mi_json.status ;
+            $( "#id_estat" ).html( szError ) ;                                 // show error message at specific <div>
+        } ;
+    } ) ;
+} ) ;
+
 $( function() {
 
     index_ready(); // DOM ready event
 
 } ) ; // DOM ready
+

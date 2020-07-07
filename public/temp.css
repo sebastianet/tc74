@@ -13,3 +13,17 @@
      border: 1px solid gray ;
  }
 
+#id_estat {
+     background-color: yellow ;
+     padding: 5px ;
+ }
+
+body {
+    font-family: Verdana, Arial, sans-serif ;
+    font-size: 18px ;
+    background: #C0C0C0 ;
+    padding: 0 ;
+    margin-left: 20px ;
+    margin-right: 20px ;
+    border: 1px solid red ;
+ }
