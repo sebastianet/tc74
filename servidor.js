@@ -5,6 +5,7 @@
 // versions
 //  1.1.a - 20200707 - inici
 //  1.1.b - 20200707 - python local, envio JSON
+//  1.1.c - 20200710 - lectura python single byte
 
 // pendent
 //  detectar IP de qui es conecta
@@ -23,7 +24,7 @@ app.use( express.static( path.join( __dirname + '/public') ) ) ;
 
 // define some own constants
 
-var myVersio  = "1.1.b" ;
+var myVersio  = "1.1.c" ;
 
 var Detalls   = 1 ;                                // control de la trassa que generem via "mConsole"
 
@@ -88,7 +89,11 @@ app.get( '/get_temp', function ( req, res ) {
 
     var tc74_temp = -3 ;
 
-    mConsole( '+++ /get temp, gimme json' ) ;
+    szIP1 = req.connection.remoteAddress ;
+    szIP2 = req.ip ;
+    szIP3 = req.header( 'x-forwarded-for' )
+
+    mConsole( '+++ /get temp, gimme json, ip1 ' + szIP1 + ', ip2 ' + szIP2 + ', ip3 ' + szIP3 ) ;
 
     PythonShell.run( 'tc74_read.py', python_options, function( err, results ) { // results is an array of messages collected during execution
 

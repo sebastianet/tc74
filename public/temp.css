@@ -1,6 +1,7 @@
 
 /* TEMP CSS   2020 07 07      */
 /*  blsone                    */
+/*  body padding              */
 
 .blsone {
      font-family: Verdana, Arial, sans-serif ;
@@ -22,7 +23,7 @@ body {
     font-family: Verdana, Arial, sans-serif ;
     font-size: 18px ;
     background: #C0C0C0 ;
-    padding: 0 ;
+    padding: 10px ;
     margin-left: 20px ;
     margin-right: 20px ;
     border: 1px solid red ;

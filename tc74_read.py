@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
-# this code reads a TC74 at i2c address 0x4A 
-# https://learn.sparkfun.com/tutorials/tmp102-digital-temperature-sensor-hookup-guide
-# https://learn.sparkfun.com/tutorials/python-programming-tutorial-getting-started-with-the-raspberry-pi/experiment-4-i2c-temperature-sensor
+# pip3.7 install smbus2
 
 import time 
-import smbus
+from smbus2 import SMBus
+import datetime
 
 # i2c channel. used in init 
 i2c_ch = 1  
@@ -23,31 +22,13 @@ def twos_comp(val, bits):
         val = val - (1 << bits)
     return val 
 
-# Read temperature registers and calculate Celsius
-def read_temp( i2c_addr ):
-
-    # Read temperature registers
-    val = bus.read_i2c_block_data( i2c_addr, reg_temp, 2)
-    # NOTE: val[0] = MSB byte 1, val [1] = LSB byte 2
-    # print ("!shifted val[0] = ", bin(val[0]), "val[1] = ", bin(val[1]))
-
-    temp_c = (val[0] << 4) | (val[1] >> 4)
-    # print (" shifted val[0] = ", bin(val[0] << 4), "val[1] = ", bin(val[1] >> 4))
-    # print (bin(temp_c))
-
-    # Convert to 2s complement (temperatures can be negative)
-    temp_c = twos_comp(temp_c, 12)  
-
-    # Convert registers value to temperature (C)
-    temp_c = temp_c * 0.0625
-
-    return temp_c
-
 # Initialize I2C (SMBus)
-bus = smbus.SMBus(i2c_ch)
+bus = SMBus( i2c_ch )
 
 # Print out temperature ONCE
 
-temperatura = read_temp( i2c_tc74 )
-print( round(temperatura, 2) )
+b = bus.read_byte_data( i2c_tc74, 0)     # read one byte from xip, offset 0
+c = twos_comp( b, 8 )
+
+print( c )
 
