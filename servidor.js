@@ -6,25 +6,30 @@
 //  1.1.a - 20200707 - inici
 //  1.1.b - 20200707 - python local, envio JSON
 //  1.1.c - 20200710 - lectura python single byte
+//  1.2.a - 20200714 - canvas, grafica temperatures
+//  1.2.b - 20200714 - timeout per llegir del TC74
 
 // pendent
-//  detectar IP de qui es conecta
+//  *) detectar IP de qui es conecta
+//  *) https://en.wikipedia.org/wiki/RRDtool
 
 const express = require( 'express' )
 const path    = require( 'path' ) ;
 const http    = require( 'http' ) ;
 let {PythonShell}  = require( 'python-shell' ) ;  
 
-var app = express() ;
+let app = express() ;
 
-app.set( 'mPort', process.env.PORT || 8123 ) ;      // save port to use in APP var
+app.set( 'mPort', process.env.PORT || 8123 ) ;                   // save port to use in APP var
+app.set( 'appHostname', require('os').hostname() ) ;             // save hostname
+app.set( 'cfgLapse_Read_TC74', process.env.TO_TC74 || 15000 ) ;  // 15.000 msg 
 
 // serve "filename" from "public" folder at the URL /:filename, or "index.html" if "/"
 app.use( express.static( path.join( __dirname + '/public') ) ) ;   
 
-// define some own constants
+// **** **** define own constants
 
-var myVersio  = "1.1.c" ;
+var myVersio  = "1.2.b" ;
 
 var Detalls   = 1 ;                                // control de la trassa que generem via "mConsole"
 
@@ -33,14 +38,20 @@ var python_options = {
   pythonPath: '/usr/bin/python',
   pythonOptions: ['-u'],
   scriptPath: '/home/sag/tc74',                  // here we read just ONE time, /home/sag/python/i2c/tc74_read.py is continous
-  args: [ 'value1', 'value2.jpeg', 'value3' ]    // only place where we specify the picture filename
+  args: [ 'value1', 'value2.jpeg', 'value3' ]    // possible arguments for python function
 } ;
 
-// string to identify this program. Sent to own log at start and to client on request
-szID = 'app SEND TEMPERATURE. Versio (' + myVersio + '), listening on port {'+ app.get( 'mPort' ) + '}.' ;
+var my_Temperatures = {
+  timestamp : Date.now(),
+  valors: [ 14, 14, 13, 13, 13, 12, 12, 12, 12, 13, 16, 17,
+            19, 22, 24, 25, 26, 25, 24, 22, 21, 19, 18, 16 ]
+}
+
+// array max size : 1 mostra / 15 seg, 4 mostres / 1 minut, 240 mostres / 1 hora, 5.760 mostres / 1 dia
+const kMaxLength = 17280 ;  // lets store 3 days
 
 
-// define some own functions
+// **** **** define own functions
 
 Date.prototype.yyyymmdd = function ( ) { 
 
@@ -83,17 +94,45 @@ function mConsole ( szIn ) {
 } ; // mConsole()
 
 
-// catch client requests
+function myTimeout_Do_Read_TC74 ( arg ) { // read temperature 
+
+    var szOut = " >>> timeout llegir TC74. " ;
+    mConsole( szOut ) ;
+
+    PythonShell.run( 'tc74_read.py', python_options, function( err, results ) { // results is an array of messages collected during execution
+
+        tc74_temp = String( results[0] ) ;                           // convert to string
+        mConsole( "(+2) python temperature (" + tc74_temp + ")." ) ;                          
+        var newLength = my_Temperatures.valors.push( tc74_temp ) ;       // add to the end
+        if ( newLength > kMaxLength ) {                                  // if too large
+            var elGone = my_Temperatures.valors.shift() ;                // then remove from the begin
+//            mConsole( "removed (" + elGone + "), now lng is "+ my_Temperatures.valors.length ) ;
+        } else {
+            mConsole( newLength + "<=" + kMaxLength ) ;
+        } ;
+//        mConsole( "now has (" + my_Temperatures.valors.length + ") items." ) ;                          
+
+    } ) ; // run PythonShell
+
+} ; //
+
+
+// **** **** catch client requests
+
+app.get( '/api/dibuix_temperatures', function ( req, res ) { 
+    res.send( my_Temperatures ) ;
+} ) ;
 
 app.get( '/get_temp', function ( req, res ) {
 
     var tc74_temp = -3 ;
 
-    szIP1 = req.connection.remoteAddress ;
-    szIP2 = req.ip ;
-    szIP3 = req.header( 'x-forwarded-for' )
+//    szIP1 = req.connection.remoteAddress ;
+//    szIP2 = req.ip ;
+//    szIP3 = req.header( 'x-forwarded-for' )
 
-    mConsole( '+++ /get temp, gimme json, ip1 ' + szIP1 + ', ip2 ' + szIP2 + ', ip3 ' + szIP3 ) ;
+    mConsole( '+++ /get temp, gimme json' ) ;
+//    mConsole( '+++ /get temp, gimme json, ip1 ' + szIP1 + ', ip2 ' + szIP2 + ', ip3 ' + szIP3 ) ;
 
     PythonShell.run( 'tc74_read.py', python_options, function( err, results ) { // results is an array of messages collected during execution
 
@@ -131,12 +170,29 @@ app.get( '/get_temp', function ( req, res ) {
 
     } ) ; // run PythonShell
 
-} ) ; // get(/fes_photo_gimme_json) do photo and send its name
+} ) ; // get( /get_temp ) 
+
 
 // lets go
 
+// (1) set timeout
+
+setInterval( myTimeout_Do_Read_TC74, app.get( 'cfgLapse_Read_TC74' ) ) ;   // lets call own function every defined lapse
+
+
+// (2) Write an initial message into console.
+
+var szOut = "+++ +++ +++ +++ app TC74 temperature. Versio["+myVersio+"], " ;
+szOut += "port["+app.get('mPort')+"], " ;
+szOut += "HN["+app.get('appHostname')+"]." ;
+mConsole( szOut ) ;
+
+
+// (3) start server
+
 http.createServer( app ).listen( app.get( 'mPort' ), function() {
-    console.log( 'temperature express server v 1.0 listening on port [' + app.get('mPort') + '].' ) ;
+
+    console.log( 'temperature server listening on port [' + app.get('mPort') + '].' ) ;
 
 } ) ; // listen
 

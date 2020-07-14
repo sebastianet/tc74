@@ -1,7 +1,9 @@
 
-/* TEMP CSS   2020 07 07      */
+/* TEMP CSS   2020 07 14      */
 /*  blsone                    */
 /*  body padding              */
+/*  body and html             */
+/*  canvas style              */
 
 .blsone {
      font-family: Verdana, Arial, sans-serif ;
@@ -12,6 +14,10 @@
      margin-left: 5px ;
      margin-right: 10px ;
      border: 1px solid gray ;
+ }
+
+#my_graph {
+     background-color: #F0F0F0 ;
  }
 
 #id_estat {
@@ -27,4 +33,8 @@ body {
     margin-left: 20px ;
     margin-right: 20px ;
     border: 1px solid red ;
+ }
+
+html {
+    background: #F0F0F0 ;
  }
