@@ -10,18 +10,26 @@
 //  1.2.b - 20200714 - timeout per llegir del TC74
 //  1.2.c - 20200717 - 1 mesura cada 30 segons, millors missatges
 //  1.2.d - 20200717 - .env
+//  1.2.e - 20200719 - trassa dotenv (Pere)
+//  1.2.f - 20200719 - trace used memory when reading single temperature
 
 // pendent
 //  *) detectar IP de qui es conecta
 //  *) https://en.wikipedia.org/wiki/RRDtool
 //  *) print memoryUsage() - https://www.valentinog.com/blog/node-usage/
-//  *) amb cada JSON que enviem, afegir-hi un missatge per la "status line" groga
+
+// urls 
+//   https://www.valentinog.com/blog/node-usage/ - memory usage 
 
 const express = require( 'express' )
 const path    = require( 'path' ) ;
 const http    = require( 'http' ) ;
 let {PythonShell}  = require( 'python-shell' ) ;  
-require( 'dotenv' ).config()
+
+// require( 'dotenv' ).config() ;
+// console.log( require( 'dotenv' ).config( {debug: true} ) ) ; 
+require( 'dotenv' ).config( {path:__dirname+'/.env'} ) ;                 // __dirname is the directory in which the currently executing script resides. 
+// console.log( require( 'dotenv' ).config({path:__dirname+'/.env'}) ) ;
 
 let app = express() ;
 
@@ -34,7 +42,7 @@ app.use( express.static( path.join( __dirname + '/public') ) ) ;
 
 // **** **** define own constants
 
-var myVersio  = "1.2.d" ;
+var myVersio  = "1.2.f" ;
 
 var Detalls   = 1 ;                                // control de la trassa que generem via "mConsole"
 
@@ -159,13 +167,17 @@ app.get( '/get_temp', function ( req, res ) {
 //            mConsole( sz_PY_result ) ;                          
 //            console.log( '(+) Python results #1 are (%j).', results ) ;
 
+    var usedMem = process.memoryUsage().heapUsed / 1024 / 1024;
+    var usedMemMB = Math.round(usedMem * 100) / 100 ;
+    var szOut = `### The script uses approximately `+ usedMemMB +` MB` ;
+
             tc74_temp = String( results[0] ) ;                           // convert to string
-            mConsole( "(+1) python temperature (" + tc74_temp + ")." ) ;                          
+            mConsole( "(+1) python temperature (" + tc74_temp + "), Used Memory (" + usedMemMB + ") MB." ) ;                          
 
             if ( tc74_temp > 1 ) {
 
                 res.writeHead( 200, { 'Content-Type': 'application/json' }) ;
-                let my_json = { status: 'OK', temp: tc74_temp } ;
+                let my_json = { status: 'OK', temp: tc74_temp, memoria: szOut } ;
                 res.end( JSON.stringify( my_json ) ) ;
 
             } else { // no pic == filename = "."
@@ -188,7 +200,6 @@ app.get( '/get_temp', function ( req, res ) {
 
 setInterval( myTimeout_Do_Read_TC74, app.get( 'cfgLapse_Read_TC74' ) ) ;   // lets call own function every defined lapse
 
-
 // (2) Write an initial message into console.
 
 var szOut = "+++ +++ +++ +++ app TC74 temperature. Versio["+myVersio+"], " ;
@@ -196,7 +207,6 @@ szOut += "port["+app.get('mPort')+"], " ;
 szOut += "timeout["+app.get('cfgLapse_Read_TC74')+"], " ;
 szOut += "HN["+app.get('appHostname')+"]." ;
 mConsole( szOut ) ;
-
 
 // (3) start server
 

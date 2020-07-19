@@ -54,6 +54,7 @@ $( "#butoLlegir" ).click( function() {
             console.log( '+++ got {' + mi_json.temp + '}.' ) ;
             var szTemp = genTimeStamp() + ' *** la temperatura a casa meva es ' + mi_json.temp + ' ºC ***' ;
             $( "#id_temp" ).html( szTemp ) ;                                   // show error message at specific <div>
+            $( "#id_estat" ).html( mi_json.memoria ) ;                         // show error message at specific <div>
         } else {
             var szError = genTimeStamp() + 'Error RxJSON ' + mi_json.status ;
             $( "#id_estat" ).html( szError ) ;                                 // show error message at specific <div>
