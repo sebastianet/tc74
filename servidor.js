@@ -8,28 +8,33 @@
 //  1.1.c - 20200710 - lectura python single byte
 //  1.2.a - 20200714 - canvas, grafica temperatures
 //  1.2.b - 20200714 - timeout per llegir del TC74
+//  1.2.c - 20200717 - 1 mesura cada 30 segons, millors missatges
+//  1.2.d - 20200717 - .env
 
 // pendent
 //  *) detectar IP de qui es conecta
 //  *) https://en.wikipedia.org/wiki/RRDtool
+//  *) print memoryUsage() - https://www.valentinog.com/blog/node-usage/
+//  *) amb cada JSON que enviem, afegir-hi un missatge per la "status line" groga
 
 const express = require( 'express' )
 const path    = require( 'path' ) ;
 const http    = require( 'http' ) ;
 let {PythonShell}  = require( 'python-shell' ) ;  
+require( 'dotenv' ).config()
 
 let app = express() ;
 
-app.set( 'mPort', process.env.PORT || 8123 ) ;                   // save port to use in APP var
+app.set( 'mPort', process.env.PORT || 8122 ) ;                   // save port to use in APP var - use 8123 as FO router
 app.set( 'appHostname', require('os').hostname() ) ;             // save hostname
-app.set( 'cfgLapse_Read_TC74', process.env.TO_TC74 || 15000 ) ;  // 15.000 msg 
+app.set( 'cfgLapse_Read_TC74', process.env.TO_TC74 || 15000 ) ;  // 1 lectura cada 30.000 msg = 30 segons
 
 // serve "filename" from "public" folder at the URL /:filename, or "index.html" if "/"
 app.use( express.static( path.join( __dirname + '/public') ) ) ;   
 
 // **** **** define own constants
 
-var myVersio  = "1.2.b" ;
+var myVersio  = "1.2.d" ;
 
 var Detalls   = 1 ;                                // control de la trassa que generem via "mConsole"
 
@@ -43,12 +48,12 @@ var python_options = {
 
 var my_Temperatures = {
   timestamp : Date.now(),
-  valors: [ 14, 14, 13, 13, 13, 12, 12, 12, 12, 13, 16, 17,
-            19, 22, 24, 25, 26, 25, 24, 22, 21, 19, 18, 16 ]
+  valors : [ 30 ]
 }
 
-// array max size : 1 mostra / 15 seg, 4 mostres / 1 minut, 240 mostres / 1 hora, 5.760 mostres / 1 dia
-const kMaxLength = 17280 ;  // lets store 3 days
+// array max size : 1 mostra / 15 seg, 4 mostres / 1 minut, 240 mostres / 1 hora, 5.760 mostres / 3 dies, 17280 mostres
+// array max size : 1 mostra / 30 seg, 2 mostres / 1 minut, 120 mostres / 1 hora, 2.880 mostres / 3 dies, 8.640
+const kMaxLength = 8640 ;  // lets store 3 days
 
 
 // **** **** define own functions
@@ -107,21 +112,25 @@ function myTimeout_Do_Read_TC74 ( arg ) { // read temperature
         if ( newLength > kMaxLength ) {                                  // if too large
             var elGone = my_Temperatures.valors.shift() ;                // then remove from the begin
 //            mConsole( "removed (" + elGone + "), now lng is "+ my_Temperatures.valors.length ) ;
-        } else {
-            mConsole( newLength + "<=" + kMaxLength ) ;
+//        } else {
+//            mConsole( newLength + "<=" + kMaxLength ) ;
         } ;
 //        mConsole( "now has (" + my_Temperatures.valors.length + ") items." ) ;                          
 
     } ) ; // run PythonShell
 
-} ; //
+} ; // myTimeout_Do_Read_TC74()
 
 
 // **** **** catch client requests
 
 app.get( '/api/dibuix_temperatures', function ( req, res ) { 
+
+    my_Temperatures.timestamp = genTimeStamp() ;
+    mConsole( ">>> enviem dades dibuix temperatures, te (" + my_Temperatures.valors.length + ") items." ) ;                          
     res.send( my_Temperatures ) ;
-} ) ;
+
+} ) ; // get ( /api/dibuix_temperatures )
 
 app.get( '/get_temp', function ( req, res ) {
 
@@ -131,7 +140,7 @@ app.get( '/get_temp', function ( req, res ) {
 //    szIP2 = req.ip ;
 //    szIP3 = req.header( 'x-forwarded-for' )
 
-    mConsole( '+++ /get temp, gimme json' ) ;
+    mConsole( '+++ crida /get_temp des el client, gimme json' ) ;
 //    mConsole( '+++ /get temp, gimme json, ip1 ' + szIP1 + ', ip2 ' + szIP2 + ', ip3 ' + szIP3 ) ;
 
     PythonShell.run( 'tc74_read.py', python_options, function( err, results ) { // results is an array of messages collected during execution
@@ -184,6 +193,7 @@ setInterval( myTimeout_Do_Read_TC74, app.get( 'cfgLapse_Read_TC74' ) ) ;   // le
 
 var szOut = "+++ +++ +++ +++ app TC74 temperature. Versio["+myVersio+"], " ;
 szOut += "port["+app.get('mPort')+"], " ;
+szOut += "timeout["+app.get('cfgLapse_Read_TC74')+"], " ;
 szOut += "HN["+app.get('appHostname')+"]." ;
 mConsole( szOut ) ;
 

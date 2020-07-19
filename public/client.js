@@ -64,8 +64,8 @@ $( "#butoLlegir" ).click( function() {
 
 
 const canvas = document.getElementById( 'my_graph' ) ;
-const ctx = canvas.getContext('2d');
-const MARGIN = 20;
+const ctx = canvas.getContext('2d') ;
+const MARGIN = 20 ;
 
 function drawValues(values) {
 
@@ -79,7 +79,7 @@ function drawValues(values) {
     ctx.fillText( rangeY[0], 0, MARGIN );
     ctx.fillText( rangeY[1], 0, canvas.height-MARGIN );
     ctx.fillText( rangeX[0], MARGIN, canvas.height );
-    ctx.fillText( rangeX[1], canvas.width-MARGIN, canvas.height );
+    ctx.fillText( rangeX[1], canvas.width-2*MARGIN, canvas.height );
 
     function scaleInRange( val, range ){
       return  ( val - range[0] ) / ( range[1]-range[0]);
@@ -94,14 +94,20 @@ function drawValues(values) {
     for (let i = 0; i < values.length; i++)
       ctx.lineTo(...valueToXY(i,values[i]));
     ctx.stroke();
-}
+
+} ; // drawValues()
 
 
 $( "#butoDibuixar" ).click( function() {
 
     console.log( '+++ (' + genTimeStamp() + ') +++ clicked Dibuixar temperatures' ) ;
 
-    $.getJSON( '/api/dibuix_temperatures', result => drawValues( result.valors ) ) ;
+//    $.getJSON( '/api/dibuix_temperatures', result => drawValues( result.valors ) ) ;
+    $.getJSON( '/api/dibuix_temperatures', function( mi_json) {
+        drawValues( mi_json.valors ) ;
+        let szMarca = "### el dibuix s'ha fet a les ... " + mi_json.timestamp ;
+        $( "#id_estat" ).html( szMarca ) ;            
+    } ) ; // getJSON()
 
 } ) ; // buto "dibuixar temperatures"
 
