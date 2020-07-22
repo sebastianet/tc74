@@ -5,12 +5,18 @@
 
  Events sequence is :
 
-   *) client browser goes to http://myraspiodin.hopto.org:8123/, acessing the nodejs server on that port
+   *) client browser goes to http://myraspiodin.hopto.org:8123/, accessing the nodejs server on that port
+
    *) server provides "index.html" file - the important code is "client.js" at bottom
+
    *) at "DOM ready" event on the client, we fill the "load" date into the page, to diferentiate reloaded pages
+
    *) when user clicks the "Read Temperature" button, the request is sent to server
+
    *) server calls python code to get the temperature from the TC74 chip
+
    *) server sends temperature to client browser
+
    *) client fills the page with the provided value
 
  If the client clicks on "draw temperatures" button, the server sends up to 3 days of values,
