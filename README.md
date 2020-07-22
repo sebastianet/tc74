@@ -19,6 +19,6 @@
 
    **) client fills the page with the provided value
 
-   *) if the client clicks on "draw temperatures" button, the server sends up to 3 days of values, 8.640 values,
- collected one every 30 seconds at server. Then the client draws the values on the canvas.
+   *) if the client clicks on "draw temperatures" button, the server sends up to 3 days of values, 
+ collected one every 30 seconds at server (up to 8.640 values). Then the client draws the values on the canvas.
 
