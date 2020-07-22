@@ -13,12 +13,12 @@
 
    *) when user clicks the "Read Temperature" button, the request is sent to server
 
-   *) server calls python code to get the temperature from the TC74 chip
+   **) server calls python code to get the temperature from the TC74 chip
 
-   *) server sends temperature to client browser
+   **) server sends temperature to client browser
 
-   *) client fills the page with the provided value
+   **) client fills the page with the provided value
 
- If the client clicks on "draw temperatures" button, the server sends up to 3 days of values,
+   *) if the client clicks on "draw temperatures" button, the server sends up to 3 days of values,
  collected one every 30 seconds at server. Then the client draws the values on the canvas.
 
