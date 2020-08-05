@@ -12,11 +12,12 @@
 //  1.2.d - 20200717 - .env
 //  1.2.e - 20200719 - trassa dotenv (Pere)
 //  1.2.f - 20200719 - trace used memory when reading single temperature
+//  1.3.a - 20200803 - read 2nd temperature from SoC, store 4 days of data
+//  1.3.b - 20200805 - send number of samples and period
 
 // pendent
 //  *) detectar IP de qui es conecta
 //  *) https://en.wikipedia.org/wiki/RRDtool
-//  *) print memoryUsage() - https://www.valentinog.com/blog/node-usage/
 
 // urls 
 //   https://www.valentinog.com/blog/node-usage/ - memory usage 
@@ -33,16 +34,16 @@ require( 'dotenv' ).config( {path:__dirname+'/.env'} ) ;                 // __di
 
 let app = express() ;
 
-app.set( 'mPort', process.env.PORT || 8122 ) ;                   // save port to use in APP var - use 8123 as FO router
-app.set( 'appHostname', require('os').hostname() ) ;             // save hostname
-app.set( 'cfgLapse_Read_TC74', process.env.TO_TC74 || 15000 ) ;  // 1 lectura cada 30.000 msg = 30 segons
+app.set( 'mPort', process.env.PORT || 1122 ) ;                         // save port to use in APP var - use 8123 as FO router
+app.set( 'appHostname', require('os').hostname() ) ;                   // save hostname
+app.set( 'cfgLapse_Read_TC74_i_SOC', process.env.TO_TC74 || 15000 ) ;  // 1 lectura cada 30.000 msg = 30 segons
 
 // serve "filename" from "public" folder at the URL /:filename, or "index.html" if "/"
 app.use( express.static( path.join( __dirname + '/public') ) ) ;   
 
 // **** **** define own constants
 
-var myVersio  = "1.2.f" ;
+var myVersio  = "1.3.b" ;
 
 var Detalls   = 1 ;                                // control de la trassa que generem via "mConsole"
 
@@ -54,15 +55,19 @@ var python_options = {
   args: [ 'value1', 'value2.jpeg', 'value3' ]    // possible arguments for python function
 } ;
 
-var my_Temperatures = {
+var my_Temperatures_tc74 = {
   timestamp : Date.now(),
   valors : [ 30 ]
 }
 
-// array max size : 1 mostra / 15 seg, 4 mostres / 1 minut, 240 mostres / 1 hora, 5.760 mostres / 3 dies, 17280 mostres
-// array max size : 1 mostra / 30 seg, 2 mostres / 1 minut, 120 mostres / 1 hora, 2.880 mostres / 3 dies, 8.640
-const kMaxLength = 8640 ;  // lets store 3 days
+var my_Temperatures_SoC = {
+  timestamp : Date.now(),
+  valors : [ 50 ]
+}
 
+// array max size : 1 mostra/15 seg, 4 mostres/1 minut, 240 mostres/1 hora, 5.760 mostres/1 dia, 17280 mostres/3 dies, 
+// array max size : 1 mostra/30 seg, 2 mostres/1 minut, 120 mostres/1 hora, 2.880 mostres/1 dia, 8.640 mostres/3 dies, 11.520 mostres/4 dies
+const kMaxLength = 11520 ;  // lets store 4 days
 
 // **** **** define own functions
 
@@ -107,42 +112,59 @@ function mConsole ( szIn ) {
 } ; // mConsole()
 
 
-function myTimeout_Do_Read_TC74 ( arg ) { // read temperature 
+function myTimeout_Do_Read_TC74_i_SOC ( arg ) { // read temperature 
 
-    var szOut = " >>> timeout llegir TC74. " ;
+    var szOut = " >>> timeout llegir TC74 i SOC. " ;
     mConsole( szOut ) ;
 
     PythonShell.run( 'tc74_read.py', python_options, function( err, results ) { // results is an array of messages collected during execution
 
-        tc74_temp = String( results[0] ) ;                           // convert to string
-        mConsole( "(+2) python temperature (" + tc74_temp + ")." ) ;                          
-        var newLength = my_Temperatures.valors.push( tc74_temp ) ;       // add to the end
-        if ( newLength > kMaxLength ) {                                  // if too large
-            var elGone = my_Temperatures.valors.shift() ;                // then remove from the begin
-//            mConsole( "removed (" + elGone + "), now lng is "+ my_Temperatures.valors.length ) ;
-//        } else {
-//            mConsole( newLength + "<=" + kMaxLength ) ;
+        let tc74_1temp = String( results[0] ) ;                           // convert to string
+        mConsole( "(+2) python TC74 temperature (" + tc74_1temp + ")." ) ;                          
+
+        var newLength = my_Temperatures_tc74.valors.push( tc74_1temp ) ;  // add to the end
+        if ( newLength > kMaxLength ) {                                   // if too large
+            var elGone = my_Temperatures_tc74.valors.shift() ;            // then remove from the begin
         } ;
-//        mConsole( "now has (" + my_Temperatures.valors.length + ") items." ) ;                          
+
+        PythonShell.run( 'soc_read.py', python_options, function( err, results ) { // results is an array of messages collected during execution
+
+            let soc_1temp = String( results[0] ) ;
+            mConsole( "(+2) python SOC temperature (" + soc_1temp + ")." ) ;                          
+            newLength = my_Temperatures_SoC.valors.push( soc_1temp ) ;       // add to the end
+            if ( newLength > kMaxLength ) {                                  // if too large
+                var elGone = my_Temperatures_SoC.valors.shift() ;            // then remove from the begin
+            } ;
+
+        } ) ; // run PythonShell
 
     } ) ; // run PythonShell
 
-} ; // myTimeout_Do_Read_TC74()
+} ; // myTimeout_Do_Read_TC74_i_SOC()
 
 
 // **** **** catch client requests
 
-app.get( '/api/dibuix_temperatures', function ( req, res ) { 
+app.get( '/api/dibuix_temperatures_TC74', function ( req, res ) { 
 
-    my_Temperatures.timestamp = genTimeStamp() ;
-    mConsole( ">>> enviem dades dibuix temperatures, te (" + my_Temperatures.valors.length + ") items." ) ;                          
-    res.send( my_Temperatures ) ;
+    my_Temperatures_tc74.timestamp = genTimeStamp() ;
+    mConsole( ">>> enviem dades dibuix temperatures TC74, te (" + my_Temperatures_tc74.valors.length + ") items." ) ;                          
+    res.send( my_Temperatures_tc74 ) ;
 
-} ) ; // get ( /api/dibuix_temperatures )
+} ) ; // get ( /api/dibuix_temperatures/TC74 )
+
+app.get( '/api/dibuix_temperatures_SOC', function ( req, res ) { 
+
+    my_Temperatures_SoC.timestamp = genTimeStamp() ;
+    mConsole( ">>> enviem dades dibuix temperatures SOC, te (" + my_Temperatures_SoC.valors.length + ") items." ) ;                          
+    res.send( my_Temperatures_SoC ) ;
+
+} ) ; // get ( /api/dibuix_temperatures/SOC )
 
 app.get( '/get_temp', function ( req, res ) {
 
-    var tc74_temp = -3 ;
+    let tc74_temp = -3 ;
+    let soc_temp  = -4 ;
 
 //    szIP1 = req.connection.remoteAddress ;
 //    szIP2 = req.ip ;
@@ -151,11 +173,15 @@ app.get( '/get_temp', function ( req, res ) {
     mConsole( '+++ crida /get_temp des el client, gimme json' ) ;
 //    mConsole( '+++ /get temp, gimme json, ip1 ' + szIP1 + ', ip2 ' + szIP2 + ', ip3 ' + szIP3 ) ;
 
+    var usedMem = process.memoryUsage().heapUsed / 1024 / 1024 ;
+    var usedMemMB = Math.round(usedMem * 100) / 100 ;
+    var szOut = usedMemMB +` MB` ;                               // used memory -> client's status line
+
     PythonShell.run( 'tc74_read.py', python_options, function( err, results ) { // results is an array of messages collected during execution
 
-        if ( err ) {                                                 // got error in python shell -> send a specific "error" pic
+        if ( err ) {     
 
-            var szErr = '--- Python error. ' ;
+            var szErr = '--- Python TC74 error. ' ;
             szErr += 'Path (' + err.path + '). ' ;
             szErr += 'Stack (' + err.stack + '). ' ;
             console.log( szErr ) ;
@@ -163,29 +189,35 @@ app.get( '/get_temp', function ( req, res ) {
 
         } else {
 
-//            var sz_PY_result = sprintf( '(+) Python results #1 are (%j).', results ) ;
-//            mConsole( sz_PY_result ) ;                          
-//            console.log( '(+) Python results #1 are (%j).', results ) ;
+            tc74_temp = String( results[0] ) ;                           // convert python result to string
 
-    var usedMem = process.memoryUsage().heapUsed / 1024 / 1024;
-    var usedMemMB = Math.round(usedMem * 100) / 100 ;
-    var szOut = `### The script uses approximately `+ usedMemMB +` MB` ;
+            PythonShell.run( 'soc_read.py', python_options, function( err, results ) { // results is an array of messages collected during execution
 
-            tc74_temp = String( results[0] ) ;                           // convert to string
-            mConsole( "(+1) python temperature (" + tc74_temp + "), Used Memory (" + usedMemMB + ") MB." ) ;                          
+                if ( err ) {           
 
-            if ( tc74_temp > 1 ) {
+                    var szErr = '--- Python SOC error. ' ;
+                    szErr += 'Path (' + err.path + '). ' ;
+                    szErr += 'Stack (' + err.stack + '). ' ;
+                    console.log( szErr ) ;
+                    throw err ;                                              // fatal error : stop 
 
-                res.writeHead( 200, { 'Content-Type': 'application/json' }) ;
-                let my_json = { status: 'OK', temp: tc74_temp, memoria: szOut } ;
-                res.end( JSON.stringify( my_json ) ) ;
+                } else {
 
-            } else { // no pic == filename = "."
+                    soc_temp = String( results[0] ) ;
 
-                let my_json = { status: 'KO', temp: tc74_temp } ;
-                res.end( JSON.stringify( my_json ) ) ;
+                    mConsole( "(+1) python temperature (" + tc74_temp + "/" + soc_temp + "), Used Memory (" + usedMemMB + ") MB." ) ;                          
+                    res.writeHead( 200, { 'Content-Type': 'application/json' }) ;
+                    let my_json = { status: 'OK', 
+                                    temp_tc: tc74_temp, 
+                                    temp_soc: soc_temp, 
+                                    num_samples: kMaxLength,
+                                    sampling_period: app.get( 'cfgLapse_Read_TC74_i_SOC' ) / 1000,  // send number of seconds
+                                    szMemoria: szOut } ;
+                    res.end( JSON.stringify( my_json ) ) ;
 
-            } ;
+                } ; // no error
+
+            } ) ; // run PythonShell
 
         } ; // no error
 
@@ -198,13 +230,13 @@ app.get( '/get_temp', function ( req, res ) {
 
 // (1) set timeout
 
-setInterval( myTimeout_Do_Read_TC74, app.get( 'cfgLapse_Read_TC74' ) ) ;   // lets call own function every defined lapse
+setInterval( myTimeout_Do_Read_TC74_i_SOC, app.get( 'cfgLapse_Read_TC74_i_SOC' ) ) ;   // lets call own function every defined lapse
 
 // (2) Write an initial message into console.
 
-var szOut = "+++ +++ +++ +++ app TC74 temperature. Versio["+myVersio+"], " ;
+var szOut = "+++ +++ +++ +++ app TC74 i SOC temperature. Versio["+myVersio+"], " ;
 szOut += "port["+app.get('mPort')+"], " ;
-szOut += "timeout["+app.get('cfgLapse_Read_TC74')+"], " ;
+szOut += "timeout["+app.get('cfgLapse_Read_TC74_i_SOC')+"], " ;
 szOut += "HN["+app.get('appHostname')+"]." ;
 mConsole( szOut ) ;
 

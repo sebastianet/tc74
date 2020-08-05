@@ -51,10 +51,15 @@ $( "#butoLlegir" ).click( function() {
         console.log( '+++ (' + genTimeStamp() + ') +++ got JSON q {' + mi_json.status + '}.' ) ;
 
         if ( mi_json.status == "OK" ) {
-            console.log( '+++ got {' + mi_json.temp + '}.' ) ;
-            var szTemp = genTimeStamp() + ' *** la temperatura a casa meva es ' + mi_json.temp + ' ºC ***' ;
+            console.log( '+++ got {' + mi_json.temp_tc + '/' + mi_json.temp_soc + '}.' ) ;
+            var szTemp = genTimeStamp() + ' *** la temperatura a casa meva es (' + mi_json.temp_tc + ' / ' + mi_json.temp_soc + ') ºC ***' ;
             $( "#id_temp" ).html( szTemp ) ;                                   // show error message at specific <div>
-            $( "#id_estat" ).html( mi_json.memoria ) ;                         // show error message at specific <div>
+
+            var szLlegir =  "Guardem (" + mi_json.num_samples + ") mostres, "
+                szLlegir += "cadascuna llegida cada (" + mi_json.sampling_period + ") segons. "
+                szLlegir += "Memoria que fem servir per guardar dades : (" + mi_json.szMemoria + "). "
+            $( "#id_estat" ).html( szLlegir ) ;                         // show error message at specific <div>
+
         } else {
             var szError = genTimeStamp() + 'Error RxJSON ' + mi_json.status ;
             $( "#id_estat" ).html( szError ) ;                                 // show error message at specific <div>
@@ -99,18 +104,35 @@ function drawValues(values) {
 } ; // drawValues()
 
 
-$( "#butoDibuixar" ).click( function() {
+$( "#butoDibuixarTC74" ).click( function() {
 
-    console.log( '+++ (' + genTimeStamp() + ') +++ clicked Dibuixar temperatures' ) ;
+    console.log( '+++ (' + genTimeStamp() + ') +++ clicked Dibuixar temperatures del TC74' ) ;
 
-//    $.getJSON( '/api/dibuix_temperatures', result => drawValues( result.valors ) ) ;
-    $.getJSON( '/api/dibuix_temperatures', function( mi_json) {
+    $.getJSON( '/api/dibuix_temperatures_TC74', function( mi_json) {
+
         drawValues( mi_json.valors ) ;
+
         let szMarca = "### el dibuix s'ha fet a les ... " + mi_json.timestamp ;
         $( "#id_estat" ).html( szMarca ) ;            
+
     } ) ; // getJSON()
 
-} ) ; // buto "dibuixar temperatures"
+} ) ; // buto "dibuixar temperatures del TC74"
+
+$( "#butoDibuixarSOC" ).click( function() {
+
+    console.log( '+++ (' + genTimeStamp() + ') +++ clicked Dibuixar temperatures del SoC' ) ;
+
+    $.getJSON( '/api/dibuix_temperatures_SOC', function( mi_json) {
+
+        drawValues( mi_json.valors ) ;
+
+        let szMarca = "### el dibuix s'ha fet a les ... " + mi_json.timestamp ;
+        $( "#id_estat" ).html( szMarca ) ;            
+
+    } ) ; // getJSON()
+
+} ) ; // buto "dibuixar temperatures del SOC"
 
 
 $( function() {
